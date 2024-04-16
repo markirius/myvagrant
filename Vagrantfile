@@ -1,16 +1,22 @@
 # -*- mode: ruby -*-
 # vim: set ft=ruby :
+# VAGRANT_DISABLE_STRICT_DEPENDENCY_ENFORCEMENT=1 vagrant plugin install <plugin>
 
 API_VERSION = "2"
-VM_PROVIDER = "libvirt"
-WORKERS = 1
-VM_MEMORY = 2048
-VM_CPUS = 2
+# VM_PROVIDER = "libvirt"
+# WORKERS = 1
+# VM_MEMORY = 2048
+# VM_CPUS = 2
+# USERNAME = "username"
+# PASSWORD = "password"
+# REGISTRY = "registry_address_without_https"
+
 
 Vagrant.configure(API_VERSION) do |config|
 
   # IMAGE
   config.vm.box = "debian/bullseye64"
+  config.env.enable
 
   # INSTALL CURL
   config.vm.provision "shell", privileged: true do |s|
@@ -31,9 +37,14 @@ Vagrant.configure(API_VERSION) do |config|
 
   # DOCKER REGISTER
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "docker login registry.site -u username -p password"
+    s.inline = "docker login #{ENV['REGISTRY']} -u #{ENV['USERNAME']} -p #{ENV['PASSWORD']}"
   end
 
+  # PULL CARAVEL
+  config.vm.provision "shell", privileged: true do |s|
+    s.inline = "docker pull #{ENV['REGISTRY']}/timecaravel/#{ENV['IMAGE']}"
+  end
+  
   # NETWORK
   config.vm.network "public_network", 
     dev: "enp0s20f0u2c2"
@@ -44,9 +55,9 @@ Vagrant.configure(API_VERSION) do |config|
     host: 2222
 
   # SETTINGS
-  config.vm.provider VM_PROVIDER do |v|
-    v.memory = VM_MEMORY
-    v.cpus = VM_CPUS
+  config.vm.provider ENV['VM_PROVIDER'] do |v|
+    v.memory = ENV['VM_MEMORY']
+    v.cpus = ENV['VM_CPUS']
   end
 
 end
