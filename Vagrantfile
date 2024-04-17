@@ -14,8 +14,9 @@ API_VERSION = "2"
 
 Vagrant.configure(API_VERSION) do |config|
 
-  # IMAGE
+  # GENERAL
   config.vm.box = "debian/bullseye64"
+  config.vm.synced_folder "./shared", "/vagrant", create: true
   config.env.enable
 
   # INSTALL CURL
@@ -31,18 +32,18 @@ Vagrant.configure(API_VERSION) do |config|
 
   # INSTALL PORTAINER
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "docker volume create portainer data"
-    s.inline = "/usr/bin/docker run -d -p 8000:8000 -p 9000:9000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest"
+    s.inline = "/usr/bin/docker volume create portainer data"
+    s.inline = "/usr/bin/docker run -d -p 8000:8000 -p 9000:9000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest --admin-password='$2y$05$5v0f1A2j/7yMaVwUHvWliO0MMAjpw8hJYgl0gL/J5VTUVGp6NudMW'"
   end
 
   # DOCKER REGISTER
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "docker login #{ENV['REGISTRY']} -u #{ENV['USERNAME']} -p #{ENV['PASSWORD']}"
+    s.inline = "/usr/bin/docker login #{ENV['REGISTRY']} -u #{ENV['USERNAME']} -p #{ENV['PASSWORD']}"
   end
 
   # PULL CARAVEL
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "docker pull #{ENV['REGISTRY']}/timecaravel/#{ENV['IMAGE']}"
+    s.inline = "/usr/bin/docker pull #{ENV['REGISTRY']}/#{ENV['IMAGE']}"
   end
   
   # NETWORK
