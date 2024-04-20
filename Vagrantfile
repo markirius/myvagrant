@@ -22,7 +22,7 @@ Vagrant.configure(API_VERSION) do |config|
   # INSTALL CURL
   config.vm.provision "shell", privileged: true do |s|
     s.inline = "apt update"
-    s.inline = "apt install curl -y"
+    s.inline = "apt install curl httpie jq -y"
   end
 
   # INSTALL DOCKER
@@ -38,17 +38,49 @@ Vagrant.configure(API_VERSION) do |config|
 
   # DOCKER REGISTER
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "/usr/bin/docker login #{ENV['REGISTRY']} -u #{ENV['USERNAME']} -p #{ENV['PASSWORD']}"
+    s.inline = "/usr/bin/docker login #{ENV['REGISTRY']} -u #{ENV['USERNAME']} -p #{ENV['PASSWORD']} || true"
   end
 
   # PULL CARAVEL
   config.vm.provision "shell", privileged: true do |s|
-    s.inline = "/usr/bin/docker pull #{ENV['REGISTRY']}/#{ENV['IMAGE']}"
+    s.inline = "/usr/bin/docker pull #{ENV['REGISTRY']}/#{ENV['IMAGE']} || true"
+    s.inline = "/usr/bin/docker pull mysql:5.7 || true" 
+  end
+
+  # PORTAINER CONFIG STANDALONE MODE
+  config.vm.provision "shell" do |s|
+    s.inline = <<-SHELL
+    JWT=$(http --ignore-stdin POST localhost:9000/api/auth Username="admin" Password="adminadminadmin" | jq -r ".jwt")
+    http --ignore-stdin --form POST localhost:9000/api/endpoints \
+        "Authorization: Bearer ${JWT}" \
+        Name="localy" \
+        EndpointCreationType=1 \
+        URL="unix:///var/run/docker.sock"
+
+    echo -n '{"authentication": true, "name": "senai_al_caravel", "password": "#{ENV['PASSWORD']}", "type": 3, "url": "#{ENV['REGISTRY']}", "username": "#{ENV['USERNAME']}"}' |\
+    http POST localhost:9000/api/registries "Authorization: Bearer ${JWT}"
+    SHELL
+  end
+
+  # PORTAINER ADDING CARAVEL STACK
+  config.vm.provision "shell" do |s|
+    s.inline = <<-SHELL
+    JWT=$(http --ignore-stdin POST localhost:9000/api/auth Username="admin" Password="adminadminadmin" | jq -r ".jwt")  
+    http POST localhost:9000/api/stacks/create/standalone/string?endpointId=1 "Authorization: Bearer ${JWT}" < /vagrant/caravel.json
+    SHELL
   end
   
+  # PORTAINER ADDING POSTGRES STACK
+  config.vm.provision "shell" do |s|
+    s.inline = <<-SHELL
+    JWT=$(http --ignore-stdin POST localhost:9000/api/auth Username="admin" Password="adminadminadmin" | jq -r ".jwt")  
+    http POST localhost:9000/api/stacks/create/standalone/string?endpointId=1 "Authorization: Bearer ${JWT}" < /vagrant/postgres.json
+    SHELL
+  end
+
   # NETWORK
   config.vm.network "public_network", 
-    dev: "enp0s20f0u2c2"
+    dev: "wlp0s20f3"
   config.vm.network "private_network", 
     ip: "192.168.10.10"
   config.vm.network "forwarded_port",
