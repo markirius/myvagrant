@@ -16,7 +16,7 @@ Vagrant.configure(API_VERSION) do |config|
 
   # GENERAL
   config.vm.box = "debian/bullseye64"
-  config.vm.synced_folder "./shared", "/vagrant", create: true
+  config.vm.synced_folder "./shared", "/vagrant", create: true, type: "nfs"
   config.env.enable
 
   # INSTALL CURL
@@ -80,7 +80,7 @@ Vagrant.configure(API_VERSION) do |config|
 
   # NETWORK
   config.vm.network "public_network", 
-    dev: "wlp0s20f3"
+    dev: "enp0s20f0u2c2"
   config.vm.network "private_network", 
     ip: "192.168.10.10"
   config.vm.network "forwarded_port",
